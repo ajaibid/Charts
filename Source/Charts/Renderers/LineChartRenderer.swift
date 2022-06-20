@@ -8,7 +8,6 @@
 //
 //  https://github.com/danielgindi/Charts
 //
-
 import Foundation
 import CoreGraphics
 
@@ -462,9 +461,9 @@ open class LineChartRenderer: LineRadarRenderer
             for i in 0 ..< dataSets.count
             {
                 guard let
-                    dataSet = dataSets[i] as? ILineChartDataSet,
-                    shouldDrawValues(forDataSet: dataSet)
-                    else { continue }
+                        dataSet = dataSets[i] as? ILineChartDataSet,
+                      shouldDrawValues(forDataSet: dataSet)
+                else { continue }
                 
                 let valueFont = dataSet.valueFont
                 
@@ -484,47 +483,128 @@ open class LineChartRenderer: LineRadarRenderer
                 }
                 
                 _xBounds.set(chart: dataProvider, dataSet: dataSet, animator: animator)
+                
+                if dataSet.isDrawLowAndHighEnabled {
+                    var lowDataCount = 0
+                    var highDataCount = 0
+                    
+                    for j in _xBounds where dataSet.entryForIndex(j)?.y == dataSet.yMax {
+                        highDataCount += 1
+                    }
+                    for j in _xBounds where dataSet.entryForIndex(j)?.y == dataSet.yMin {
+                        lowDataCount += 1
+                    }
+                    
+                    var currentHighIndexToBeDrawn = -1
+                    var currentLowIndexToBeDrawn = -1
+                    
+                    
+                    for j in _xBounds where dataSet.entryForIndex(j)?.y == dataSet.yMax || dataSet.entryForIndex(j)?.y == dataSet.yMin
+                    {
+                        guard let e = dataSet.entryForIndex(j) else { break }
+                        
+                        pt.x = CGFloat(e.x)
+                        pt.y = CGFloat(e.y * phaseY)
+                        pt = pt.applying(valueToPixelMatrix)
+                        
+                        if (!viewPortHandler.isInBoundsRight(pt.x))
+                        {
+                            break
+                        }
+                        
+                        if (!viewPortHandler.isInBoundsLeft(pt.x) || !viewPortHandler.isInBoundsY(pt.y))
+                        {
+                            continue
+                        }
+                        let additionalOffset: CGFloat = 8.0
+                        let font = NSUIFont.systemFont(ofSize: 12)
 
-                for j in _xBounds
-                {
-                    guard let e = dataSet.entryForIndex(j) else { break }
-                    
-                    pt.x = CGFloat(e.x)
-                    pt.y = CGFloat(e.y * phaseY)
-                    pt = pt.applying(valueToPixelMatrix)
-                    
-                    if (!viewPortHandler.isInBoundsRight(pt.x))
-                    {
-                        break
+                        let isHigh = dataSet.entryForIndex(j)?.y == dataSet.yMax
+                        if isHigh {
+                            currentHighIndexToBeDrawn += 1
+                            
+                            if currentHighIndexToBeDrawn == (highDataCount - 1) {
+                                let yPoint = (pt.y - font.lineHeight - additionalOffset)
+                                let text = " H: \(Int(e.y)) "
+                                print(UIScreen.main.bounds)
+                                
+                                ChartUtils.drawTextWithinSafeArea(
+                                    context: context,
+                                    text: text,
+                                    point: CGPoint(
+                                        x: pt.x,
+                                        y: yPoint),
+                                    align: .center,
+                                    attributes: [NSAttributedString.Key.font: valueFont, NSAttributedString.Key.foregroundColor: dataSet.valueTextColorAt(j)])
+                            }
+                        } else {
+                            currentLowIndexToBeDrawn += 1
+                            
+                            if currentLowIndexToBeDrawn == (lowDataCount - 1) {
+                                let yPoint = (pt.y - CGFloat(valOffset) + font.lineHeight + 2.5)
+                                let text = " L: \(Int(e.y)) "
+                                
+                                ChartUtils.drawTextWithinSafeArea(
+                                    context: context,
+                                    text: text,
+                                    point: CGPoint(
+                                        x: pt.x,
+                                        y: yPoint),
+                                    align: .center,
+                                    attributes: [NSAttributedString.Key.font: valueFont, NSAttributedString.Key.foregroundColor: dataSet.valueTextColorAt(j)])
+                            }
+                        }
+                        if let icon = e.icon, dataSet.isDrawIconsEnabled
+                        {
+                            ChartUtils.drawImage(context: context,
+                                                 image: icon,
+                                                 x: pt.x + iconsOffset.x,
+                                                 y: pt.y + iconsOffset.y,
+                                                 size: icon.size)
+                        }
                     }
-                    
-                    if (!viewPortHandler.isInBoundsLeft(pt.x) || !viewPortHandler.isInBoundsY(pt.y))
+                } else if dataSet.isDrawValuesEnabled {
+                    for j in _xBounds
                     {
-                        continue
-                    }
-                    
-                    if dataSet.isDrawValuesEnabled {
-                        ChartUtils.drawText(
-                            context: context,
-                            text: formatter.stringForValue(
-                                e.y,
-                                entry: e,
-                                dataSetIndex: i,
-                                viewPortHandler: viewPortHandler),
-                            point: CGPoint(
-                                x: pt.x,
-                                y: pt.y - CGFloat(valOffset) - valueFont.lineHeight),
-                            align: .center,
-                            attributes: [NSAttributedString.Key.font: valueFont, NSAttributedString.Key.foregroundColor: dataSet.valueTextColorAt(j)])
-                    }
-                    
-                    if let icon = e.icon, dataSet.isDrawIconsEnabled
-                    {
-                        ChartUtils.drawImage(context: context,
-                                             image: icon,
-                                             x: pt.x + iconsOffset.x,
-                                             y: pt.y + iconsOffset.y,
-                                             size: icon.size)
+                        guard let e = dataSet.entryForIndex(j) else { break }
+                        
+                        pt.x = CGFloat(e.x)
+                        pt.y = CGFloat(e.y * phaseY)
+                        pt = pt.applying(valueToPixelMatrix)
+                        
+                        if (!viewPortHandler.isInBoundsRight(pt.x))
+                        {
+                            break
+                        }
+                        
+                        if (!viewPortHandler.isInBoundsLeft(pt.x) || !viewPortHandler.isInBoundsY(pt.y))
+                        {
+                            continue
+                        }
+                        
+                        if dataSet.isDrawValuesEnabled {
+                            ChartUtils.drawText(
+                                context: context,
+                                text: formatter.stringForValue(
+                                    e.y,
+                                    entry: e,
+                                    dataSetIndex: i,
+                                    viewPortHandler: viewPortHandler),
+                                point: CGPoint(
+                                    x: pt.x,
+                                    y: pt.y - CGFloat(valOffset) - valueFont.lineHeight),
+                                align: .center,
+                                attributes: [NSAttributedString.Key.font: valueFont, NSAttributedString.Key.foregroundColor: dataSet.valueTextColorAt(j)])
+                        }
+                        
+                        if let icon = e.icon, dataSet.isDrawIconsEnabled
+                        {
+                            ChartUtils.drawImage(context: context,
+                                                 image: icon,
+                                                 x: pt.x + iconsOffset.x,
+                                                 y: pt.y + iconsOffset.y,
+                                                 size: icon.size)
+                        }
                     }
                 }
             }

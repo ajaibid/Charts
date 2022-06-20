@@ -54,6 +54,14 @@ open class ChartViewBase: NSUIView, ChartDataProvider, AnimatorDelegate
     /// - Returns: The object representing all x-labels, this method can be used to
     /// acquire the XAxis object and modify it (e.g. change the position of the
     /// labels)
+    public var circleIconName: String?
+    public enum MarkerPosition {
+        case flexible
+        case stickedOnTop
+    }
+    public var markerIconSize: CGSize = CGSize(width: 10, height: 10)
+    public var markerPosition: MarkerPosition = .flexible
+    
     @objc open var xAxis: XAxis
     {
         return _xAxis
@@ -380,7 +388,6 @@ open class ChartViewBase: NSUIView, ChartDataProvider, AnimatorDelegate
     }
     
     // MARK: - Accessibility
-
     open override func accessibilityChildren() -> [Any]? {
         return renderer?.accessibleChartElements
     }
@@ -417,7 +424,7 @@ open class ChartViewBase: NSUIView, ChartDataProvider, AnimatorDelegate
     }
 
     /// Highlights the values at the given indices in the given DataSets. Provide
-    /// null or an empty array to undo all highlighting. 
+    /// null or an empty array to undo all highlighting.
     /// This should be used to programmatically highlight values.
     /// This method *will not* call the delegate.
     @objc open func highlightValues(_ highs: [Highlight]?)
@@ -576,7 +583,6 @@ open class ChartViewBase: NSUIView, ChartDataProvider, AnimatorDelegate
     @objc open var lastHighlighted: Highlight?
   
     // MARK: - Markers
-
     /// draws all MarkerViews on the highlighted positions
     internal func drawMarkers(context: CGContext)
     {
@@ -589,32 +595,68 @@ open class ChartViewBase: NSUIView, ChartDataProvider, AnimatorDelegate
         
         for i in 0 ..< _indicesToHighlight.count
         {
-            let highlight = _indicesToHighlight[i]
-            
-            guard let
-                set = data?.getDataSetByIndex(highlight.dataSetIndex),
-                let e = _data?.entryForHighlight(highlight)
-                else { continue }
-            
-            let entryIndex = set.entryIndex(entry: e)
-            if entryIndex > Int(Double(set.entryCount) * _animator.phaseX)
-            {
-                continue
+            if markerPosition == .flexible {
+                let highlight = _indicesToHighlight[i]
+                
+                guard let
+                    set = data?.getDataSetByIndex(highlight.dataSetIndex),
+                    let e = _data?.entryForHighlight(highlight)
+                    else { continue }
+                
+                let entryIndex = set.entryIndex(entry: e)
+                if entryIndex > Int(Double(set.entryCount) * _animator.phaseX)
+                {
+                    continue
+                }
+
+                let pos = getMarkerPosition(highlight: highlight)
+
+                // check bounds
+                if !_viewPortHandler.isInBounds(x: pos.x, y: pos.y)
+                {
+                    continue
+                }
+
+                // callbacks to update the content
+                marker.refreshContent(entry: e, highlight: highlight)
+                
+                // draw the marker
+                marker.draw(context: context, point: pos)
+            } else {
+                let highlight = _indicesToHighlight[i]
+                
+                guard let
+                    set = data?.getDataSetByIndex(highlight.dataSetIndex),
+                    let e = _data?.entryForHighlight(highlight)
+                    else { continue }
+                
+                let entryIndex = set.entryIndex(entry: e)
+                if entryIndex > Int(Double(set.entryCount) * _animator.phaseX)
+                {
+                    continue
+                }
+
+                let pos = getMarkerPosition(highlight: highlight)
+                var markerPosition = pos
+                markerPosition.y = 0
+
+                // callbacks to update the content
+                marker.refreshContent(entry: e, highlight: highlight)
+                
+                if let iconName = circleIconName {
+                    let icon = UIImage(named: iconName)
+                    ChartUtils.drawImage(
+                        context: context,
+                        image: icon!,
+                        x: pos.x,
+                        y: pos.y,
+                        size: markerIconSize
+                    )
+                }
+                
+                // draw the marker
+                marker.draw(context: context, point: markerPosition)
             }
-
-            let pos = getMarkerPosition(highlight: highlight)
-
-            // check bounds
-            if !_viewPortHandler.isInBounds(x: pos.x, y: pos.y)
-            {
-                continue
-            }
-
-            // callbacks to update the content
-            marker.refreshContent(entry: e, highlight: highlight)
-            
-            // draw the marker
-            marker.draw(context: context, point: pos)
         }
     }
     
@@ -758,7 +800,6 @@ open class ChartViewBase: NSUIView, ChartDataProvider, AnimatorDelegate
     }
     
     // MARK: - Accessors
-
     /// The current y-max value across all DataSets
     open var chartYMax: Double
     {
@@ -960,7 +1001,7 @@ open class ChartViewBase: NSUIView, ChartDataProvider, AnimatorDelegate
     
     /// Deceleration friction coefficient in [0 ; 1] interval, higher values indicate that speed will decrease slowly, for example if it set to 0, it will stop immediately.
     /// 1 is an invalid value, and will be converted to 0.999 automatically.
-    /// 
+    ///
     /// **default**: true
     @objc open var dragDecelerationFrictionCoef: CGFloat
     {

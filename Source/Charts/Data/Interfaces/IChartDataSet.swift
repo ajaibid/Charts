@@ -8,7 +8,6 @@
 //
 //  https://github.com/danielgindi/Charts
 //
-
 import Foundation
 import CoreGraphics
 
@@ -267,4 +266,8 @@ public protocol IChartDataSet
     
     /// `true` if this DataSet is visible inside the chart, or `false` ifit is currently hidden.
     var isVisible: Bool { get }
+    
+    var drawLowAndHighEnabled: Bool { get set }
+    
+    var isDrawLowAndHighEnabled: Bool { get }
 }

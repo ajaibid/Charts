@@ -8,7 +8,6 @@
 //
 //  https://github.com/danielgindi/Charts
 //
-
 import Foundation
 import CoreGraphics
 
@@ -178,6 +177,34 @@ open class ChartUtils
         if align == .center
         {
             point.x -= text.size(withAttributes: attributes).width / 2.0
+        }
+        else if align == .right
+        {
+            point.x -= text.size(withAttributes: attributes).width
+        }
+        
+        NSUIGraphicsPushContext(context)
+        
+        (text as NSString).draw(at: point, withAttributes: attributes)
+        
+        NSUIGraphicsPopContext()
+    }
+    
+    open class func drawTextWithinSafeArea(context: CGContext, text: String, point: CGPoint, align: NSTextAlignment, attributes: [NSAttributedString.Key : Any]?)
+    {
+        var point = point
+        let deviceFrameSize = UIScreen.main.bounds.size
+        let textWidth = text.size(withAttributes: attributes).width
+        
+        if align == .center
+        {
+            point.x -= textWidth / 2.0
+            
+            if point.x + (textWidth) >= (deviceFrameSize.width - 2) {
+                point.x = deviceFrameSize.width - textWidth - 0.5
+            } else if point.x <= 0 {
+                point.x = 0.5
+            }
         }
         else if align == .right
         {

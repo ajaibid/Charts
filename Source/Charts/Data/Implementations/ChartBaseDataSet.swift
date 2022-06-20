@@ -8,7 +8,6 @@
 //
 //  https://github.com/danielgindi/Charts
 //
-
 import Foundation
 import CoreGraphics
 
@@ -377,7 +376,7 @@ open class ChartBaseDataSet: NSObject, IChartDataSet, NSCopying
         return drawIconsEnabled
     }
     
-    /// Offset of icons drawn on the chart.  
+    /// Offset of icons drawn on the chart.
     ///
     /// For all charts except Pie and Radar it will be ordinary (x offset, y offset).
     ///
@@ -409,7 +408,7 @@ open class ChartBaseDataSet: NSObject, IChartDataSet, NSCopying
     
     // MARK: - NSCopying
     
-    open func copy(with zone: NSZone? = nil) -> Any 
+    open func copy(with zone: NSZone? = nil) -> Any
     {
         let copy = type(of: self).init()
         
@@ -431,5 +430,11 @@ open class ChartBaseDataSet: NSObject, IChartDataSet, NSCopying
         copy.visible = visible
         
         return copy
+    }
+    
+    public var drawLowAndHighEnabled: Bool = false
+    
+    public var isDrawLowAndHighEnabled: Bool {
+        return drawLowAndHighEnabled
     }
 }
